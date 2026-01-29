@@ -4,54 +4,33 @@ import { useState, ChangeEvent } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-// Type declarations
-interface Equipment {
-  [key: string]: string;
-}
-
-interface Tire {
-  label: string;
-  condition: string;
-  wear: number;
-}
-
-interface Tires {
-  [key: string]: Tire;
-}
+interface Equipment { [key: string]: string; }
+interface Tire { label: string; condition: string; wear: number; }
+interface Tires { [key: string]: Tire; }
+interface Photos { [key: string]: string | null; }
 
 interface FormData {
-  companyName: string;
-  reportDate: string;
-  unitNumber: string;
-  location: string;
-  inspector: string;
-  loadedDamaged: string;
-  unloadedDamaged: string;
-  equipment: Equipment;
-  tires: Tires;
-  comments: string;
-}
-
-interface Photos {
-  [key: string]: string | null;
+  companyName: string; reportDate: string; unitNumber: string; location: string;
+  inspector: string; loadedDamaged: string; unloadedDamaged: string;
+  equipment: Equipment; tires: Tires; comments: string;
+  strapCount: string; lockCount: string; cornerCount: string;
+  roofBar: string; spareTire: string;
+  roofCondition: string; roofDamageNote: string;
+  sidesCondition: string; sidesDamageNote: string;
 }
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<string>('info');
   const [photos, setPhotos] = useState<Photos>({
-    frontLeft: null, front: null, left: null,
-    backRight: null, back: null, right: null
+    frontLeft: null, front: null, left: null, backRight: null, back: null, right: null
   });
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   
   const [formData, setFormData] = useState<FormData>({
     companyName: 'Kuljetus T Laaksonen oy',
     reportDate: new Date().toISOString().split('T')[0],
-    unitNumber: '',
-    location: '',
-    inspector: '',
-    loadedDamaged: 'NO',
-    unloadedDamaged: 'NO',
+    unitNumber: '', location: '', inspector: '',
+    loadedDamaged: 'NO', unloadedDamaged: 'NO',
     equipment: {
       tarpaulin: 'OK', tirCord: 'OK', sideBoard: 'OK', stanchions: 'OK',
       doors: 'OK', tiltFrame: 'OK', planksFloor: 'OK', breaks: 'OK',
@@ -66,24 +45,21 @@ export default function Home() {
       rearRight1: { label: 'RR1', condition: 'OK', wear: 100 },
       rearRight2: { label: 'RR2', condition: 'OK', wear: 100 }
     },
-    comments: ''
+    comments: '',
+    strapCount: '', lockCount: '', cornerCount: '',
+    roofBar: 'YES', spareTire: 'YES',
+    roofCondition: 'OK', roofDamageNote: '',
+    sidesCondition: 'OK', sidesDamageNote: ''
   });
 
   const equipmentItems = [
-    { key: 'tarpaulin', label: 'TARPAULIN' },
-    { key: 'tirCord', label: 'TIR-CORD' },
-    { key: 'sideBoard', label: 'SIDE BOARD' },
-    { key: 'stanchions', label: 'STANCHIONS' },
-    { key: 'doors', label: 'DOORS' },
-    { key: 'tiltFrame', label: 'TILT FRAME' },
-    { key: 'planksFloor', label: 'PLANKS & FLOOR' },
-    { key: 'breaks', label: 'BREAKS' },
-    { key: 'legs', label: 'LEGS' },
-    { key: 'airCoupling', label: 'AIR COUPLING' },
-    { key: 'rearBumper', label: 'REAR BUMPER' },
-    { key: 'reeferEngine', label: 'REEFER ENGINE' },
-    { key: 'lightsWiring', label: 'LIGHTS / WIRING' },
-    { key: 'spansets', label: 'SPANSETS' }
+    { key: 'tarpaulin', label: 'TARPAULIN' }, { key: 'tirCord', label: 'TIR-CORD' },
+    { key: 'sideBoard', label: 'SIDE BOARD' }, { key: 'stanchions', label: 'STANCHIONS' },
+    { key: 'doors', label: 'DOORS' }, { key: 'tiltFrame', label: 'TILT FRAME' },
+    { key: 'planksFloor', label: 'PLANKS & FLOOR' }, { key: 'breaks', label: 'BREAKS' },
+    { key: 'legs', label: 'LEGS' }, { key: 'airCoupling', label: 'AIR COUPLING' },
+    { key: 'rearBumper', label: 'REAR BUMPER' }, { key: 'reeferEngine', label: 'REEFER ENGINE' },
+    { key: 'lightsWiring', label: 'LIGHTS / WIRING' }, { key: 'spansets', label: 'SPANSETS' }
   ];
 
   const statusOptions = ['OK', 'DAMAGED', 'BENT', 'TEAR', 'MISSING', 'WORN'];
@@ -100,20 +76,18 @@ export default function Home() {
     }
   };
 
+  const removePhoto = (position: string) => {
+    setPhotos(prev => ({ ...prev, [position]: null }));
+  };
+
   const updateEquipment = (key: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      equipment: { ...prev.equipment, [key]: value }
-    }));
+    setFormData(prev => ({ ...prev, equipment: { ...prev.equipment, [key]: value } }));
   };
 
   const updateTire = (position: string, field: string, value: string | number) => {
     setFormData(prev => ({
       ...prev,
-      tires: {
-        ...prev.tires,
-        [position]: { ...prev.tires[position], [field]: value }
-      }
+      tires: { ...prev.tires, [position]: { ...prev.tires[position], [field]: value } }
     }));
   };
 
@@ -121,22 +95,17 @@ export default function Home() {
     try {
       const date = new Date(dateStr);
       return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+    } catch { return dateStr; }
   };
 
   const generatePDF = async () => {
     setIsGenerating(true);
-    
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const doc = new jsPDF('p', 'mm', 'a4') as any;
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 15;
       let yPos = margin;
-
       const headerBlue: [number, number, number] = [56, 189, 248];
       const lightGray: [number, number, number] = [245, 245, 245];
 
@@ -147,25 +116,6 @@ export default function Home() {
         doc.text(`Page ${pageNum}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
       };
 
-      // Header
-      doc.setFillColor(...headerBlue);
-      doc.rect(0, 0, pageWidth, 45, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(11);
-      doc.text(formData.companyName, pageWidth / 2, 12, { align: 'center' });
-      
-      doc.setFontSize(20);
-      doc.setFont(undefined, 'bold');
-      doc.text('Trailer Inspection Report', pageWidth / 2, 25, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-      doc.text(`Report Date: ${formatDate(formData.reportDate)}`, pageWidth / 2, 35, { align: 'center' });
-
-      yPos = 55;
-
-      // Section helper
       const addSection = (title: string, y: number): number => {
         doc.setFillColor(...headerBlue);
         doc.rect(margin, y, pageWidth - 2 * margin, 8, 'F');
@@ -177,13 +127,25 @@ export default function Home() {
         return y + 12;
       };
 
+      // Header
+      doc.setFillColor(...headerBlue);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.text(formData.companyName, pageWidth / 2, 12, { align: 'center' });
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('Trailer Inspection Report', pageWidth / 2, 25, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Report Date: ${formatDate(formData.reportDate)}`, pageWidth / 2, 35, { align: 'center' });
+      yPos = 55;
+
       // Trailer Information
       yPos = addSection('TRAILER INFORMATION', yPos);
       doc.setTextColor(0, 0, 0);
-      
       doc.autoTable({
-        startY: yPos,
-        margin: { left: margin, right: margin },
+        startY: yPos, margin: { left: margin, right: margin },
         body: [
           [{ content: 'UNIT NUMBER', styles: { fillColor: lightGray, fontStyle: 'bold' } }, formData.unitNumber || '—', 
            { content: 'LOCATION', styles: { fillColor: lightGray, fontStyle: 'bold' } }, formData.location || '—'],
@@ -197,69 +159,87 @@ export default function Home() {
         styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 45 }, 2: { cellWidth: 40 }, 3: { cellWidth: 45 } }
       });
-
       yPos = doc.lastAutoTable.finalY + 10;
 
-      // Equipment Condition
+      // Inventory Section
+      yPos = addSection('INVENTORY', yPos);
+      doc.autoTable({
+        startY: yPos, margin: { left: margin, right: margin },
+        body: [
+          [{ content: 'NUMBER OF STRAPS', styles: { fillColor: lightGray, fontStyle: 'bold' } }, formData.strapCount || '—', 
+           { content: 'NUMBER OF LOCKS', styles: { fillColor: lightGray, fontStyle: 'bold' } }, formData.lockCount || '—'],
+          [{ content: 'NUMBER OF CORNERS', styles: { fillColor: lightGray, fontStyle: 'bold' } }, formData.cornerCount || '—',
+           { content: 'ROOF BAR', styles: { fillColor: lightGray, fontStyle: 'bold' } }, 
+           { content: formData.roofBar, styles: { textColor: formData.roofBar === 'NO' ? [220, 38, 38] : [22, 101, 52] } }],
+          [{ content: 'SPARE TIRE', styles: { fillColor: lightGray, fontStyle: 'bold' } }, 
+           { content: formData.spareTire, styles: { textColor: formData.spareTire === 'NO' ? [220, 38, 38] : [22, 101, 52] } },
+           { content: '', styles: { fillColor: lightGray } }, '']
+        ],
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 40 }, 2: { cellWidth: 40 }, 3: { cellWidth: 45 } }
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+
+      // Roof & Sides
+      yPos = addSection('ROOF & SIDES CONDITION', yPos);
+      doc.autoTable({
+        startY: yPos, margin: { left: margin, right: margin },
+        body: [
+          [{ content: 'ROOF CONDITION', styles: { fillColor: lightGray, fontStyle: 'bold' } }, 
+           { content: formData.roofCondition, styles: { textColor: formData.roofCondition === 'DAMAGED' ? [220, 38, 38] : [22, 101, 52] } },
+           { content: 'DAMAGE NOTES', styles: { fillColor: lightGray, fontStyle: 'bold' } }, 
+           formData.roofCondition === 'DAMAGED' ? formData.roofDamageNote || '—' : 'N/A'],
+          [{ content: 'SIDES CONDITION', styles: { fillColor: lightGray, fontStyle: 'bold' } }, 
+           { content: formData.sidesCondition, styles: { textColor: formData.sidesCondition === 'DAMAGED' ? [220, 38, 38] : [22, 101, 52] } },
+           { content: 'DAMAGE NOTES', styles: { fillColor: lightGray, fontStyle: 'bold' } }, 
+           formData.sidesCondition === 'DAMAGED' ? formData.sidesDamageNote || '—' : 'N/A']
+        ],
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 25 }, 2: { cellWidth: 35 }, 3: { cellWidth: 70 } }
+      });
+      yPos = doc.lastAutoTable.finalY + 10;
+
+      // Equipment
       yPos = addSection('EQUIPMENT CONDITION', yPos);
-      
       const equipmentData = equipmentItems.map(item => [
         item.label,
-        { 
-          content: formData.equipment[item.key], 
-          styles: { 
-            textColor: formData.equipment[item.key] === 'OK' ? [22, 101, 52] : [220, 38, 38],
-            fontStyle: formData.equipment[item.key] !== 'OK' ? 'bold' : 'normal'
-          } 
-        }
+        { content: formData.equipment[item.key], styles: { 
+          textColor: formData.equipment[item.key] === 'OK' ? [22, 101, 52] : [220, 38, 38],
+          fontStyle: formData.equipment[item.key] !== 'OK' ? 'bold' : 'normal'
+        }}
       ]);
-
       doc.autoTable({
-        startY: yPos,
-        margin: { left: margin, right: margin },
+        startY: yPos, margin: { left: margin, right: margin },
         head: [[{ content: 'Equipment Item', styles: { fillColor: lightGray } }, { content: 'Status', styles: { fillColor: lightGray } }]],
         body: equipmentData,
         styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: { 0: { cellWidth: 100 }, 1: { cellWidth: 65 } },
         alternateRowStyles: { fillColor: [252, 252, 252] }
       });
-
       yPos = doc.lastAutoTable.finalY + 10;
 
-      // Tire Inspection
+      if (yPos > pageHeight - 80) { addFooter(1); doc.addPage(); yPos = margin; }
+
+      // Tires
       yPos = addSection('TIRE TREAD INSPECTION', yPos);
-      
       const tireData = Object.entries(formData.tires).map(([key, tire]) => {
         const posName = key.replace(/([A-Z])/g, ' $1').replace(/(\d)/g, ' $1').trim();
         return [
-          posName.charAt(0).toUpperCase() + posName.slice(1),
-          tire.label,
-          { 
-            content: tire.condition, 
-            styles: { 
-              textColor: tire.condition === 'OK' ? [22, 101, 52] : 
-                         tire.condition.startsWith('WEAR') ? [0, 0, 0] : [220, 38, 38]
-            } 
-          }
+          posName.charAt(0).toUpperCase() + posName.slice(1), tire.label,
+          { content: tire.condition, styles: { 
+            textColor: tire.condition === 'OK' ? [22, 101, 52] : tire.condition.startsWith('WEAR') ? [0, 0, 0] : [220, 38, 38]
+          }}
         ];
       });
-
       doc.autoTable({
-        startY: yPos,
-        margin: { left: margin, right: margin },
-        head: [[
-          { content: 'Position', styles: { fillColor: lightGray } }, 
-          { content: 'Label', styles: { fillColor: lightGray } }, 
-          { content: 'Condition', styles: { fillColor: lightGray } }
-        ]],
+        startY: yPos, margin: { left: margin, right: margin },
+        head: [[{ content: 'Position', styles: { fillColor: lightGray } }, { content: 'Label', styles: { fillColor: lightGray } }, { content: 'Condition', styles: { fillColor: lightGray } }]],
         body: tireData,
         styles: { fontSize: 9, cellPadding: 3 },
         alternateRowStyles: { fillColor: [252, 252, 252] }
       });
-
       yPos = doc.lastAutoTable.finalY + 10;
 
-      // Comments
       if (formData.comments) {
         yPos = addSection('ADDITIONAL COMMENTS', yPos);
         doc.setTextColor(0, 0, 0);
@@ -267,81 +247,59 @@ export default function Home() {
         const splitComments = doc.splitTextToSize(formData.comments, pageWidth - 2 * margin - 10);
         doc.text(splitComments, margin + 5, yPos + 5);
       }
+      addFooter(doc.internal.getNumberOfPages());
 
-      addFooter(1);
-
-      // Photos page
+      // Photos
       const hasPhotos = Object.values(photos).some(p => p);
       if (hasPhotos) {
         doc.addPage();
-        
         doc.setFillColor(...headerBlue);
         doc.rect(0, 0, pageWidth, 35, 'F');
-        
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
         doc.setFont(undefined, 'bold');
         doc.text('INSPECTION PHOTOS', pageWidth / 2, 15, { align: 'center' });
-        
         doc.setFontSize(11);
         doc.setFont(undefined, 'normal');
         doc.text(`Unit: ${formData.unitNumber}`, pageWidth / 2, 27, { align: 'center' });
-
         yPos = 45;
         
         const photoPositions = [
-          { key: 'frontLeft', label: 'FRONT LEFT' },
-          { key: 'front', label: 'FRONT' },
-          { key: 'left', label: 'LEFT' },
-          { key: 'backRight', label: 'BACK RIGHT' },
-          { key: 'back', label: 'BACK' },
-          { key: 'right', label: 'RIGHT' }
+          { key: 'frontLeft', label: 'FRONT LEFT' }, { key: 'front', label: 'FRONT' },
+          { key: 'left', label: 'LEFT' }, { key: 'backRight', label: 'BACK RIGHT' },
+          { key: 'back', label: 'BACK' }, { key: 'right', label: 'RIGHT' }
         ];
-
         const availablePhotos = photoPositions.filter(p => photos[p.key]);
-        const photoWidth = 80;
-        const photoHeight = 60;
-        let col = 0;
-        let row = 0;
-
+        let col = 0, row = 0;
         for (const photo of availablePhotos) {
-          const x = margin + col * (photoWidth + 10);
-          const y = yPos + row * (photoHeight + 20);
-
+          const x = margin + col * 90;
+          const y = yPos + row * 80;
           try {
             if (photos[photo.key]) {
-              doc.addImage(photos[photo.key], 'JPEG', x, y, photoWidth, photoHeight);
+              doc.addImage(photos[photo.key], 'JPEG', x, y, 80, 60);
               doc.setTextColor(100, 100, 100);
               doc.setFontSize(9);
               doc.setFont(undefined, 'bold');
-              doc.text(photo.label, x + photoWidth / 2, y + photoHeight + 8, { align: 'center' });
+              doc.text(photo.label, x + 40, y + 68, { align: 'center' });
             }
-          } catch (e) {
-            console.error('Error adding image:', e);
-          }
-
+          } catch (e) { console.error('Error adding image:', e); }
           col++;
-          if (col >= 2) {
-            col = 0;
-            row++;
-          }
+          if (col >= 2) { col = 0; row++; }
         }
-
-        addFooter(2);
+        addFooter(doc.internal.getNumberOfPages());
       }
 
-      const filename = `inspection-report-${formData.unitNumber || 'report'}_${formData.reportDate}.pdf`;
-      doc.save(filename);
+      doc.save(`inspection-report-${formData.unitNumber || 'report'}_${formData.reportDate}.pdf`);
     } catch (error) {
       console.error('PDF generation error:', error);
       alert('Error generating PDF. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
+    } finally { setIsGenerating(false); }
   };
 
   const tabs = [
     { id: 'info', label: 'Basic Info', icon: '📋' },
+    { id: 'inventory', label: 'Inventory', icon: '📦' },
+    { id: 'condition', label: 'Roof & Sides', icon: '🏠' },
     { id: 'equipment', label: 'Equipment', icon: '🔧' },
     { id: 'tires', label: 'Tires', icon: '⚙️' },
     { id: 'photos', label: 'Photos', icon: '📷' },
@@ -349,11 +307,11 @@ export default function Home() {
   ];
 
   const issueCount = Object.values(formData.equipment).filter(s => s !== 'OK').length +
-                     Object.values(formData.tires).filter(t => t.condition !== 'OK' && !t.condition.startsWith('WEAR')).length;
+    Object.values(formData.tires).filter(t => t.condition !== 'OK' && !t.condition.startsWith('WEAR')).length +
+    (formData.roofCondition === 'DAMAGED' ? 1 : 0) + (formData.sidesCondition === 'DAMAGED' ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-sky-50">
-      {/* Header */}
       <header className="bg-gradient-to-r from-sky-900 to-sky-700 text-white px-4 py-5 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-center flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -363,27 +321,13 @@ export default function Home() {
               <p className="text-sm opacity-80">Professional PDF Report Generator</p>
             </div>
           </div>
-          
-          <button
-            onClick={generatePDF}
-            disabled={isGenerating}
-            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg font-semibold 
-                       flex items-center gap-2 shadow-lg hover:from-emerald-600 hover:to-emerald-700 
-                       disabled:opacity-50 disabled:cursor-wait transition-all"
-          >
-            {isGenerating ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>📄 Generate PDF</>
-            )}
+          <button onClick={generatePDF} disabled={isGenerating}
+            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg font-semibold flex items-center gap-2 shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-wait transition-all">
+            {isGenerating ? (<><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Generating...</>) : (<>📄 Generate PDF</>)}
           </button>
         </div>
       </header>
 
-      {/* Summary Bar */}
       <div className="bg-white border-b px-4 py-3">
         <div className="max-w-6xl mx-auto flex gap-6 text-sm flex-wrap">
           <div><strong>Unit:</strong> {formData.unitNumber || '—'}</div>
@@ -396,105 +340,149 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="max-w-6xl mx-auto p-4 sm:p-6">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {/* Tabs */}
           <nav className="flex border-b bg-gray-50 overflow-x-auto">
             {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 font-medium flex items-center gap-2 whitespace-nowrap transition-all border-b-2
-                  ${activeTab === tab.id 
-                    ? 'bg-white text-sky-700 border-sky-500' 
-                    : 'text-gray-500 hover:text-gray-700 border-transparent'}`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`px-4 sm:px-6 py-4 font-medium flex items-center gap-2 whitespace-nowrap transition-all border-b-2
+                  ${activeTab === tab.id ? 'bg-white text-sky-700 border-sky-500' : 'text-gray-500 hover:text-gray-700 border-transparent'}`}>
+                <span>{tab.icon}</span><span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
           </nav>
 
-          {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'info' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">Basic Information</h2>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Company Name</label>
-                  <input
-                    type="text"
-                    value={formData.companyName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
-                  />
+                  <input type="text" value={formData.companyName} onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Unit Number *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., FS6257"
-                      value={formData.unitNumber}
-                      onChange={(e) => setFormData(prev => ({ ...prev, unitNumber: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
-                    />
+                    <input type="text" placeholder="e.g., FS6257" value={formData.unitNumber} onChange={(e) => setFormData(prev => ({ ...prev, unitNumber: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Report Date</label>
-                    <input
-                      type="date"
-                      value={formData.reportDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, reportDate: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
-                    />
+                    <input type="date" value={formData.reportDate} onChange={(e) => setFormData(prev => ({ ...prev, reportDate: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Location</label>
-                    <input
-                      type="text"
-                      placeholder="Inspection location"
-                      value={formData.location}
-                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
-                    />
+                    <input type="text" placeholder="Inspection location" value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Inspector</label>
-                    <input
-                      type="text"
-                      placeholder="Inspector name"
-                      value={formData.inspector}
-                      onChange={(e) => setFormData(prev => ({ ...prev, inspector: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
-                    />
+                    <input type="text" placeholder="Inspector name" value={formData.inspector} onChange={(e) => setFormData(prev => ({ ...prev, inspector: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Loaded Damaged</label>
-                    <select
-                      value={formData.loadedDamaged}
-                      onChange={(e) => setFormData(prev => ({ ...prev, loadedDamaged: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none bg-white"
-                    >
-                      <option value="NO">NO</option>
-                      <option value="YES">YES</option>
+                    <select value={formData.loadedDamaged} onChange={(e) => setFormData(prev => ({ ...prev, loadedDamaged: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none bg-white">
+                      <option value="NO">NO</option><option value="YES">YES</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Unloaded Damaged</label>
-                    <select
-                      value={formData.unloadedDamaged}
-                      onChange={(e) => setFormData(prev => ({ ...prev, unloadedDamaged: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none bg-white"
-                    >
-                      <option value="NO">NO</option>
-                      <option value="YES">YES</option>
+                    <select value={formData.unloadedDamaged} onChange={(e) => setFormData(prev => ({ ...prev, unloadedDamaged: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none bg-white">
+                      <option value="NO">NO</option><option value="YES">YES</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'inventory' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-900">Inventory</h2>
+                <p className="text-gray-500">Enter the count of items and check equipment presence:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Number of Straps</label>
+                    <input type="number" min="0" placeholder="0" value={formData.strapCount} onChange={(e) => setFormData(prev => ({ ...prev, strapCount: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Number of Locks</label>
+                    <input type="number" min="0" placeholder="0" value={formData.lockCount} onChange={(e) => setFormData(prev => ({ ...prev, lockCount: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Number of Corners</label>
+                    <input type="number" min="0" placeholder="0" value={formData.cornerCount} onChange={(e) => setFormData(prev => ({ ...prev, cornerCount: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Roof Bar</label>
+                    <select value={formData.roofBar} onChange={(e) => setFormData(prev => ({ ...prev, roofBar: e.target.value }))}
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white font-medium ${formData.roofBar === 'YES' ? 'border-green-300 text-green-600' : 'border-red-300 text-red-600'}`}>
+                      <option value="YES">YES</option><option value="NO">NO</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Spare Tire</label>
+                    <select value={formData.spareTire} onChange={(e) => setFormData(prev => ({ ...prev, spareTire: e.target.value }))}
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white font-medium ${formData.spareTire === 'YES' ? 'border-green-300 text-green-600' : 'border-red-300 text-red-600'}`}>
+                      <option value="YES">YES</option><option value="NO">NO</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'condition' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-900">Roof & Sides Condition</h2>
+                <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+                  <h3 className="font-semibold text-gray-700">Roof Condition</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condition</label>
+                      <select value={formData.roofCondition} onChange={(e) => setFormData(prev => ({ ...prev, roofCondition: e.target.value }))}
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white font-medium ${formData.roofCondition === 'OK' ? 'border-green-300 text-green-600' : 'border-red-300 text-red-600'}`}>
+                        <option value="OK">OK</option><option value="DAMAGED">DAMAGED</option>
+                      </select>
+                    </div>
+                    {formData.roofCondition === 'DAMAGED' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Describe the damage</label>
+                        <input type="text" placeholder="What is wrong with the roof?" value={formData.roofDamageNote} onChange={(e) => setFormData(prev => ({ ...prev, roofDamageNote: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-red-200 rounded-lg focus:border-red-500 focus:outline-none bg-red-50" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+                  <h3 className="font-semibold text-gray-700">Sides Condition</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condition</label>
+                      <select value={formData.sidesCondition} onChange={(e) => setFormData(prev => ({ ...prev, sidesCondition: e.target.value }))}
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white font-medium ${formData.sidesCondition === 'OK' ? 'border-green-300 text-green-600' : 'border-red-300 text-red-600'}`}>
+                        <option value="OK">OK</option><option value="DAMAGED">DAMAGED</option>
+                      </select>
+                    </div>
+                    {formData.sidesCondition === 'DAMAGED' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Describe the damage</label>
+                        <input type="text" placeholder="What is wrong with the sides?" value={formData.sidesDamageNote} onChange={(e) => setFormData(prev => ({ ...prev, sidesDamageNote: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-red-200 rounded-lg focus:border-red-500 focus:outline-none bg-red-50" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -506,23 +494,11 @@ export default function Home() {
                 <p className="text-gray-500">Select the condition status for each equipment item:</p>
                 <div className="space-y-2">
                   {equipmentItems.map(item => (
-                    <div 
-                      key={item.key} 
-                      className={`flex justify-between items-center p-4 rounded-lg ${
-                        formData.equipment[item.key] !== 'OK' ? 'bg-red-50 border border-red-200' : 'bg-gray-50'
-                      }`}
-                    >
+                    <div key={item.key} className={`flex justify-between items-center p-4 rounded-lg ${formData.equipment[item.key] !== 'OK' ? 'bg-red-50 border border-red-200' : 'bg-gray-50'}`}>
                       <span className="font-medium">{item.label}</span>
-                      <select
-                        value={formData.equipment[item.key]}
-                        onChange={(e) => updateEquipment(item.key, e.target.value)}
-                        className={`px-4 py-2 border-2 rounded-lg bg-white font-medium ${
-                          formData.equipment[item.key] === 'OK' ? 'text-green-600 border-green-200' : 'text-red-600 border-red-200'
-                        }`}
-                      >
-                        {statusOptions.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
+                      <select value={formData.equipment[item.key]} onChange={(e) => updateEquipment(item.key, e.target.value)}
+                        className={`px-4 py-2 border-2 rounded-lg bg-white font-medium ${formData.equipment[item.key] === 'OK' ? 'text-green-600 border-green-200' : 'text-red-600 border-red-200'}`}>
+                        {statusOptions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
                       </select>
                     </div>
                   ))}
@@ -541,30 +517,14 @@ export default function Home() {
                     return (
                       <div key={position} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center p-4 bg-gray-50 rounded-lg">
                         <span className="font-medium">{displayName}</span>
-                        <input
-                          type="text"
-                          value={tire.label}
-                          onChange={(e) => updateTire(position, 'label', e.target.value)}
-                          className="px-3 py-2 border-2 border-gray-200 rounded-lg text-center"
-                        />
-                        <select
-                          value={tire.condition}
-                          onChange={(e) => updateTire(position, 'condition', e.target.value)}
-                          className="px-3 py-2 border-2 border-gray-200 rounded-lg bg-white"
-                        >
-                          {tireConditions.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
+                        <input type="text" value={tire.label} onChange={(e) => updateTire(position, 'label', e.target.value)}
+                          className="px-3 py-2 border-2 border-gray-200 rounded-lg text-center" />
+                        <select value={tire.condition} onChange={(e) => updateTire(position, 'condition', e.target.value)}
+                          className="px-3 py-2 border-2 border-gray-200 rounded-lg bg-white">
+                          {tireConditions.map(opt => (<option key={opt} value={opt}>{opt}</option>))}
                         </select>
                         <div className="flex items-center gap-2">
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={tire.wear}
-                            onChange={(e) => updateTire(position, 'wear', parseInt(e.target.value))}
-                            className="flex-1"
-                          />
+                          <input type="range" min="0" max="100" value={tire.wear} onChange={(e) => updateTire(position, 'wear', parseInt(e.target.value))} className="flex-1" />
                           <span className="text-sm text-gray-500 w-10">{tire.wear}%</span>
                         </div>
                       </div>
@@ -577,43 +537,31 @@ export default function Home() {
             {activeTab === 'photos' && (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-gray-900">Inspection Photos</h2>
-                <p className="text-gray-500">Upload photos from different angles (click to upload):</p>
+                <p className="text-gray-500">Upload photos from different angles (click to upload, click ✕ to remove):</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {[
-                    { key: 'frontLeft', label: 'FRONT LEFT' },
-                    { key: 'front', label: 'FRONT' },
-                    { key: 'left', label: 'LEFT' },
-                    { key: 'backRight', label: 'BACK RIGHT' },
-                    { key: 'back', label: 'BACK' },
-                    { key: 'right', label: 'RIGHT' }
+                    { key: 'frontLeft', label: 'FRONT LEFT' }, { key: 'front', label: 'FRONT' },
+                    { key: 'left', label: 'LEFT' }, { key: 'backRight', label: 'BACK RIGHT' },
+                    { key: 'back', label: 'BACK' }, { key: 'right', label: 'RIGHT' }
                   ].map(pos => (
-                    <label 
-                      key={pos.key} 
-                      className={`aspect-[4/3] border-2 border-dashed rounded-xl flex flex-col items-center 
-                                  justify-center cursor-pointer overflow-hidden transition-all hover:border-sky-400
-                                  ${photos[pos.key] ? 'border-sky-500 border-solid' : 'border-gray-300 bg-gray-50'}`}
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload(pos.key, e)}
-                        className="hidden"
-                      />
-                      {photos[pos.key] ? (
-                        <div className="relative w-full h-full">
-                          <img src={photos[pos.key] as string} alt={pos.label} className="w-full h-full object-cover" />
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs font-semibold py-2 text-center">
-                            {pos.label}
+                    <div key={pos.key} className="relative">
+                      <label className={`aspect-[4/3] border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all hover:border-sky-400 block
+                        ${photos[pos.key] ? 'border-sky-500 border-solid' : 'border-gray-300 bg-gray-50'}`}>
+                        <input type="file" accept="image/*" onChange={(e) => handlePhotoUpload(pos.key, e)} className="hidden" />
+                        {photos[pos.key] ? (
+                          <div className="relative w-full h-full">
+                            <img src={photos[pos.key] as string} alt={pos.label} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs font-semibold py-2 text-center">{pos.label}</div>
                           </div>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-3xl mb-2">📷</span>
-                          <span className="text-sm font-semibold text-gray-600">{pos.label}</span>
-                          <span className="text-xs text-gray-400">Click to upload</span>
-                        </>
+                        ) : (
+                          <><span className="text-3xl mb-2">📷</span><span className="text-sm font-semibold text-gray-600">{pos.label}</span><span className="text-xs text-gray-400">Click to upload</span></>
+                        )}
+                      </label>
+                      {photos[pos.key] && (
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); removePhoto(pos.key); }}
+                          className="absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors z-10" title="Remove photo">✕</button>
                       )}
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -622,23 +570,14 @@ export default function Home() {
             {activeTab === 'comments' && (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-gray-900">Additional Comments</h2>
-                <textarea
-                  placeholder="Enter any additional notes or observations about the trailer condition..."
-                  value={formData.comments}
-                  onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
-                  className="w-full h-64 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 
-                             focus:outline-none resize-y"
-                />
+                <textarea placeholder="Enter any additional notes or observations about the trailer condition..." value={formData.comments} onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
+                  className="w-full h-64 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none resize-y" />
               </div>
             )}
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="text-center py-6 text-gray-500 text-sm">
-        Trailer Inspection Report Generator • Powered by Tralio.io
-      </footer>
+      <footer className="text-center py-6 text-gray-500 text-sm">Trailer Inspection Report Generator • Powered by Tralio.io</footer>
     </div>
   );
 }
