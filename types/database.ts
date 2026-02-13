@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       profiles: {
@@ -31,6 +31,7 @@ export interface Database {
           role?: 'driver' | 'admin'
           created_at?: string
         }
+        Relationships: []
       }
       reports: {
         Row: {
@@ -66,13 +67,23 @@ export interface Database {
           form_data?: Json
           created_at?: string
         }
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
     }
     Functions: {
       is_admin: {
-        Args: Record<string, never>
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
