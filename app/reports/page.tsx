@@ -82,7 +82,7 @@ export default async function ReportsPage() {
           reports={reportsWithUrls}
           drivers={drivers ?? []}
           isAdmin={isAdmin}
-          currentUserName={profile?.name ?? user.email}
+          currentUserName={profile?.name ?? user.email ?? 'Unknown User'}
         />
       </main>
     </div>
