@@ -215,6 +215,8 @@ export default function Home() {
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>('driver');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showIOSInstall, setShowIOSInstall] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   const t = translations[lang];
 
@@ -254,8 +256,12 @@ export default function Home() {
     });
   }, [router]);
 
-  // PWA install prompt
+  // PWA install prompt + iOS detection
   useEffect(() => {
+    // Detect iOS
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(iOS);
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -265,10 +271,13 @@ export default function Home() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
+    if (isIOS) {
+      setShowIOSInstall(true);
+    } else if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+    }
   };
 
   const handleSignOut = async () => {
@@ -570,14 +579,12 @@ export default function Home() {
                 RU
               </button>
             </div>
-            {deferredPrompt && (
-              <button
-                onClick={handleInstallClick}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium text-sm transition-colors"
-              >
-                📱 {t.install}
-              </button>
-            )}
+            <button
+              onClick={handleInstallClick}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium text-sm transition-colors"
+            >
+              📱 {t.install}
+            </button>
             <a href="/reports"
               className="px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg font-medium text-sm transition-colors">
               📁 {t.myReports}
@@ -608,6 +615,47 @@ export default function Home() {
       {saveSuccess && (
         <div className="bg-emerald-500 text-white text-center py-3 font-semibold">
           ✅ {t.successMessage}
+        </div>
+      )}
+
+      {/* iOS Install Instructions Modal */}
+      {showIOSInstall && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowIOSInstall(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+              {lang === 'et' ? 'Paigalda Rakendus' : 'Установить Приложение'}
+            </h3>
+            <div className="space-y-4 text-lg">
+              <p className="font-semibold text-gray-700">
+                {lang === 'et' ? 'iPhone/iPad juhised:' : 'Инструкции для iPhone/iPad:'}
+              </p>
+              <ol className="list-decimal list-inside space-y-3 text-gray-700">
+                <li>
+                  {lang === 'et'
+                    ? 'Vajutage Jaga nuppu (⬆️) ekraani allosas'
+                    : 'Нажмите кнопку Поделиться (⬆️) внизу экрана'}
+                </li>
+                <li>
+                  {lang === 'et'
+                    ? 'Kerige alla ja valige "Lisa avaekraanile"'
+                    : 'Прокрутите вниз и выберите "На экран Домой"'}
+                </li>
+                <li>
+                  {lang === 'et'
+                    ? 'Vajutage "Lisa" üleval paremal'
+                    : 'Нажмите "Добавить" в правом верхнем углу'}
+                </li>
+              </ol>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowIOSInstall(false)}
+                  className="flex-1 py-3 bg-sky-700 hover:bg-sky-800 text-white rounded-xl font-semibold text-lg transition-colors"
+                >
+                  {lang === 'et' ? 'Sain aru' : 'Понятно'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
