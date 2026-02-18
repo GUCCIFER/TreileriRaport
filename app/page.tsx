@@ -707,17 +707,32 @@ export default function Home() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t.basicInfo.location}</label>
-                    <input type="text" placeholder={t.basicInfo.locationPlaceholder} value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none" />
+                    <input
+                      type="text"
+                      list="location-suggestions"
+                      placeholder={t.basicInfo.locationPlaceholder}
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
+                    />
+                    <datalist id="location-suggestions">
+                      <option value="Tallinn, Estonia" />
+                      <option value="Riga, Latvia" />
+                      <option value="Vilnius, Lithuania" />
+                      <option value="Warsaw, Poland" />
+                      <option value="Berlin, Germany" />
+                      <option value="Helsinki, Finland" />
+                      <option value="Stockholm, Sweden" />
+                      <option value="Copenhagen, Denmark" />
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t.basicInfo.inspector}</label>
                     <input
                       type="text"
                       value={formData.inspector}
-                      readOnly
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
-                      title={t.basicInfo.inspectorHint}
+                      onChange={(e) => setFormData(prev => ({ ...prev, inspector: e.target.value }))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-500 focus:outline-none"
                     />
                   </div>
                 </div>
